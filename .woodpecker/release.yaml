@@ -16,6 +16,11 @@ steps:
         - "${CI_COMMIT_SHA:0:8}"
         - main
       logins:
+        - registry: ghcr.io
+          username:
+            from_secret: github_username
+          password:
+            from_secret: github_token
         - registry: dhi.io
           username:
             from_secret: dhi_username
