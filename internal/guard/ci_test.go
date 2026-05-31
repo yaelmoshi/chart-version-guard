@@ -36,6 +36,23 @@ func TestWoodpeckerBaseForPushPrefersPreviousSHA(t *testing.T) {
 	}
 }
 
+func TestWoodpeckerBaseForPushFallsBackToDefaultBranch(t *testing.T) {
+	env := map[string]string{
+		"CI_PIPELINE_EVENT":      "push",
+		"CI_REPO_DEFAULT_BRANCH": "sm-moshi/main",
+	}
+	base, enforce, err := ResolveWoodpeckerBase(env)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !enforce {
+		t.Fatal("expected push enforcement")
+	}
+	if base != "origin/sm-moshi/main" {
+		t.Fatalf("base = %q, want origin/sm-moshi/main", base)
+	}
+}
+
 func TestWoodpeckerBaseForManualSkipsWithoutExplicitBase(t *testing.T) {
 	env := map[string]string{
 		"CI_PIPELINE_EVENT": "manual",
@@ -63,5 +80,19 @@ func TestWoodpeckerTargetBranch(t *testing.T) {
 	}
 	if target != "main" {
 		t.Fatalf("target = %q, want main", target)
+	}
+}
+
+func TestWoodpeckerFetchTargetForPushDefaultBranch(t *testing.T) {
+	env := map[string]string{
+		"CI_PIPELINE_EVENT":      "push",
+		"CI_REPO_DEFAULT_BRANCH": "sm-moshi/main",
+	}
+	target, ok := WoodpeckerFetchTarget(env)
+	if !ok {
+		t.Fatal("expected fetch target")
+	}
+	if target != "sm-moshi/main" {
+		t.Fatalf("target = %q, want sm-moshi/main", target)
 	}
 }

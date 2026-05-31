@@ -21,6 +21,9 @@ func ResolveWoodpeckerBase(env map[string]string) (base string, enforce bool, er
 		if prev != "" && !allZeroSHA(prev) {
 			return prev, true, nil
 		}
+		if target := env["CI_REPO_DEFAULT_BRANCH"]; target != "" {
+			return "origin/" + target, true, nil
+		}
 		return "HEAD~1", true, nil
 	default:
 		return "", false, nil
@@ -28,7 +31,7 @@ func ResolveWoodpeckerBase(env map[string]string) (base string, enforce bool, er
 }
 
 func WoodpeckerFetchTarget(env map[string]string) (string, bool) {
-	if env["CI_PIPELINE_EVENT"] != "pull_request" {
+	if env["CI_PIPELINE_EVENT"] != "pull_request" && env["CI_PIPELINE_EVENT"] != "push" {
 		return "", false
 	}
 	target := env["CI_COMMIT_TARGET_BRANCH"]
