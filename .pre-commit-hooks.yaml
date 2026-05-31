@@ -1,0 +1,6 @@
+- id: chart-version-guard
+  name: Helm chart version guard
+  description: Require a top-level Chart.yaml version bump when chart templates or values change.
+  entry: chart-version-guard check --staged --repo .
+  language: golang
+  pass_filenames: false

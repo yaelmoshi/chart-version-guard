@@ -1,0 +1,27 @@
+when:
+  - event: manual
+  - event: push
+    branch: main
+
+steps:
+  - name: build-and-push-ghcr
+    image: woodpeckerci/plugin-docker-buildx:6.1.0@sha256:33263f74a593ddef5d4faeb39ae9f87db14d64d8aae8186284ae6e90d89298a4
+    privileged: true
+    settings:
+      registry: ghcr.io
+      repo: ghcr.io/yaelmoshi/chart-version-guard
+      dockerfile: Dockerfile
+      context: .
+      tags:
+        - "${CI_COMMIT_SHA:0:8}"
+        - main
+      logins:
+        - registry: dhi.io
+          username:
+            from_secret: dhi_username
+          password:
+            from_secret: dhi_password
+      provenance: mode=max
+      buildkit_driveropt: network=host
+      cache_from: 'type=registry\,ref=ghcr.io/yaelmoshi/chart-version-guard:buildcache'
+      cache_to: 'type=registry,ref=ghcr.io/yaelmoshi/chart-version-guard:buildcache,mode=max,ignore-error=true'

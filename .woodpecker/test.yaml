@@ -1,0 +1,17 @@
+when:
+  - event: pull_request
+  - event: push
+    branch: main
+
+steps:
+  - name: go-test
+    image: dhi.io/golang:1.26.3-debian13-dev@sha256:972b3b41ae70170229bd24c019dd60465130be297739a9bb64d834c21ac1a27b
+    environment:
+      DHI_USERNAME:
+        from_secret: dhi_username
+      DHI_PASSWORD:
+        from_secret: dhi_password
+    commands:
+      - go test ./...
+      - go vet ./...
+      - test -z "$(gofmt -l .)"
