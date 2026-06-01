@@ -35,4 +35,14 @@ chart-version-guard bump --base origin/main --head HEAD --repo . --write
 
 ## CI Image
 
-Woodpecker publishes `ghcr.io/yaelmoshi/chart-version-guard` from `/Users/yaelmeya/git/m0sh1.cc/chart-version-guard/.woodpecker/release.yaml`.
+Woodpecker publishes `ghcr.io/yaelmoshi/chart-version-guard` from this repository's `.woodpecker/release.yaml` pipeline.
+
+## Repository
+
+Forgejo is the source of truth:
+
+- `https://git.m0sh1.cc/m0sh1/chart-version-guard`
+
+GitHub is maintained as a public push mirror:
+
+- `https://github.com/yaelmoshi/chart-version-guard`
