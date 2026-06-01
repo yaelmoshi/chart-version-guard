@@ -24,6 +24,12 @@ Patch-bump missing chart versions locally:
 chart-version-guard bump --base origin/main --head HEAD --repo . --write
 ```
 
+Patch-bump missing chart versions from Woodpecker:
+
+```sh
+chart-version-guard bump --ci woodpecker --repo . --write
+```
+
 ## Rules
 
 - Chart roots are discovered by `Chart.yaml`.

@@ -28,7 +28,7 @@ func Run(ctx context.Context, args []string, getenv getenvFunc, stdout, stderr i
 	case "check":
 		return runCheck(ctx, args[1:], getenv, stdout, stderr)
 	case "bump":
-		return runBump(ctx, args[1:], stdout, stderr)
+		return runBump(ctx, args[1:], getenv, stdout, stderr)
 	default:
 		fmt.Fprintf(stderr, "unknown command %q\n", args[0])
 		usage(stderr)
@@ -59,18 +59,9 @@ func runCheck(ctx context.Context, args []string, getenv getenvFunc, stdout, std
 	}
 
 	if ci != "" {
-		if ci != "woodpecker" {
-			fmt.Fprintf(stderr, "unsupported --ci value %q\n", ci)
-			return 2
-		}
-		env := envMap(getenv)
-		if target, ok := guard.WoodpeckerFetchTarget(env); ok {
-			if err := fetchTarget(ctx, opts.Repo, target); err != nil {
-				fmt.Fprintln(stderr, err)
-				return 2
-			}
-		}
-		base, enforce, err := guard.ResolveWoodpeckerBase(env)
+		var enforce bool
+		var err error
+		opts, enforce, err = resolveCIOptions(ctx, opts, ci, getenv)
 		if err != nil {
 			fmt.Fprintln(stderr, err)
 			return 2
@@ -79,7 +70,6 @@ func runCheck(ctx context.Context, args []string, getenv getenvFunc, stdout, std
 			fmt.Fprintln(stdout, "chart version guard skipped for this CI event")
 			return 0
 		}
-		opts.Base = base
 	}
 
 	result, err := guard.Check(ctx, opts)
@@ -97,17 +87,32 @@ func runCheck(ctx context.Context, args []string, getenv getenvFunc, stdout, std
 	return 0
 }
 
-func runBump(ctx context.Context, args []string, stdout, stderr io.Writer) int {
+func runBump(ctx context.Context, args []string, getenv getenvFunc, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("bump", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	var opts guard.Options
+	var ci string
 	var write bool
 	fs.StringVar(&opts.Repo, "repo", ".", "repository path")
 	fs.StringVar(&opts.Base, "base", "", "base git ref")
 	fs.StringVar(&opts.Head, "head", "HEAD", "head git ref")
+	fs.StringVar(&ci, "ci", "", "CI environment resolver, supported: woodpecker")
 	fs.BoolVar(&write, "write", false, "write patch bumps to Chart.yaml files")
 	if err := fs.Parse(args); err != nil {
 		return 2
+	}
+	if ci != "" {
+		var enforce bool
+		var err error
+		opts, enforce, err = resolveCIOptions(ctx, opts, ci, getenv)
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return 2
+		}
+		if !enforce {
+			fmt.Fprintln(stdout, "chart version guard skipped for this CI event")
+			return 0
+		}
 	}
 	bumped, err := guard.BumpPatch(ctx, opts, write)
 	if err != nil {
@@ -160,6 +165,26 @@ func envMap(getenv getenvFunc) map[string]string {
 		env[key] = getenv(key)
 	}
 	return env
+}
+
+func resolveCIOptions(ctx context.Context, opts guard.Options, ci string, getenv getenvFunc) (guard.Options, bool, error) {
+	if ci != "woodpecker" {
+		return opts, false, fmt.Errorf("unsupported --ci value %q", ci)
+	}
+	env := envMap(getenv)
+	if target, ok := guard.WoodpeckerFetchTarget(env); ok {
+		if err := fetchTarget(ctx, opts.Repo, target); err != nil {
+			return opts, false, err
+		}
+	}
+	base, enforce, err := guard.ResolveWoodpeckerBase(env)
+	if err != nil {
+		return opts, false, err
+	}
+	if enforce {
+		opts.Base = base
+	}
+	return opts, enforce, nil
 }
 
 func displayChart(chart string) string {

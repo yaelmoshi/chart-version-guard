@@ -48,6 +48,34 @@ func TestBumpCommandWritesPatchBump(t *testing.T) {
 	}
 }
 
+func TestBumpCommandSupportsWoodpeckerCI(t *testing.T) {
+	repo := newGitRepo(t)
+	writeFile(t, repo, "app/Chart.yaml", "apiVersion: v2\nname: app\nversion: 0.1.0\n")
+	writeFile(t, repo, "app/values.yaml", "enabled: true\n")
+	commitAll(t, repo, "initial")
+	base := gitRev(t, repo, "HEAD")
+	writeFile(t, repo, "app/values.yaml", "enabled: false\n")
+	commitAll(t, repo, "values change")
+
+	env := map[string]string{
+		"CI_PIPELINE_EVENT":  "push",
+		"CI_COMMIT_PREV_SHA": base,
+	}
+	getenv := func(key string) string {
+		return env[key]
+	}
+
+	var stdout, stderr bytes.Buffer
+	code := Run(t.Context(), []string{"bump", "--ci", "woodpecker", "--repo", repo, "--write"}, getenv, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	got := readFile(t, repo, "app/Chart.yaml")
+	if !strings.Contains(got, "version: 0.1.1") {
+		t.Fatalf("Chart.yaml was not bumped: %q", got)
+	}
+}
+
 func newGitRepo(t *testing.T) string {
 	t.Helper()
 	repo := t.TempDir()
